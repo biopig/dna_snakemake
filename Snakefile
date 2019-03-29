@@ -6,20 +6,21 @@
 # data：2019.3.24
 #需要的软件有：fastqc, trimmomatic, bowtie2, samtools, sambamba, qualimap, deeptools, GATK, VEP 
 
-Vep="/home/zz/biosoft/vep/ensembl-vep-release-92/vep"
-Gatk="~/biosoft/gatk-4.0.4.0/gatk-package-4.0.4.0-local.jar"
-Trimmomatic="~/biosoft/Trimmomatic-0.38/trimmomatic-0.38.jar"
+#Vep="/home/zz/biosoft/vep/ensembl-vep-release-92/vep"
+#Gatk="~/biosoft/gatk-4.0.4.0/gatk-package-4.0.4.0-local.jar"
+#Trimmomatic="~/biosoft/Trimmomatic-0.38/trimmomatic-0.38.jar"
 Java="java -jar -Xss1G -Xmx5G -XX:ParallelGCThreads=3"
 
-Index="/disks/reference/index/Zea_mays.AGPv4_index"
-Reference="/disks/reference/index/Zea_mays.AGPv4.dna.toplevel.fa"
-Reference_dir="/disks/reference/index/"
-Known_vcf="/disks/reference/annotation/zea_mays.vcf"
-Known_vcf_dir="/disks/reference/annotation/"
-Cache_dir="/disks/reference/vep/"
-Truseq="/home/zz/biosoft/Trimmomatic-0.38/adapters/TruSeq3-PE-2.fa"
+#Index="/disks/reference/index/Zea_mays.AGPv4_index"
+#Reference="/disks/reference/index/Zea_mays.AGPv4.dna.toplevel.fa"
+#Reference_dir="/disks/reference/index/"
+#Known_vcf="/disks/reference/annotation/zea_mays.vcf"
+#Known_vcf_dir="/disks/reference/annotation/"
+#Cache_dir="/disks/reference/vep/"
+#Truseq="/home/zz/biosoft/Trimmomatic-0.38/adapters/TruSeq3-PE-2.fa"
 
-samples=["text"]
+configfile: "config.yaml"
+samples=config["samples"]
 
 ALL_fastqc=expand("1_fastqc/{sample}_1_fastqc.zip",sample=samples)
 
@@ -83,7 +84,7 @@ rule trimmomatic:
         "2_trimm/{sample}_2_paired.fq.gz",
         "2_trimm/{sample}_2_unpaired.fq.gz"
     shell:
-        "{Java} {Trimmomatic} PE {input[1]} {input[2]} {output} ILLUMINACLIP:{Truseq}:2:30:10:8:True SLIDINGWINDOW:5:15 LEADING:5 TRAILING:5 MINLEN:50"
+        "{Java} {config[Trimmomatic]} PE {input[1]} {input[2]} {output} ILLUMINACLIP:{config[Truseq_fa]}:2:30:10:8:True SLIDINGWINDOW:5:15 LEADING:5 TRAILING:5 MINLEN:50"
 
 rule bowtie2:
     input:
@@ -96,7 +97,7 @@ rule bowtie2:
     threads:
         4
     shell:
-        "bowtie2 -p {threads} -x {Index} -1 {input[0]} -2 {input[2]} -U {input[1]} -U {input[3]} |samtools view -S -O bam -q 30 -F 4 -o {output} -"
+        "bowtie2 -p {threads} -x {config[Index]} -1 {input[0]} -2 {input[2]} -U {input[1]} -U {input[3]} |samtools view -S -O bam -q 30 -F 4 -o {output} -"
 #在转换的时候就把质量值低的和没有比对上的去掉
 
 #sambamba在运行完后会自动构建索引的
@@ -162,7 +163,7 @@ rule GATK_addgroups:
         PU="{sample}PU",
         SM="{sample}"
     shell:
-        "{Java} {Gatk} AddOrReplaceReadGroups -I {input} -O {output} -LB {params.LB} -PL illumina -PU {params.PU} -SM {params.SM}"
+        "{Java} {config[Gatk]} AddOrReplaceReadGroups -I {input} -O {output} -LB {params.LB} -PL illumina -PU {params.PU} -SM {params.SM}"
 
 rule GATK_recalibration:
     input:
@@ -170,7 +171,7 @@ rule GATK_recalibration:
     output:
         "6_GATK/{sample}_baserecalibrator.list"
     shell:
-        "{Java} {Gatk} BaseRecalibrator -I {input} --known-sites {Known_vcf} -O {output} -R {Reference} "
+        "{Java} {config[Gatk]} BaseRecalibrator -I {input} --known-sites {config[Known_vcf]} -O {output} -R {config[reference]} "
 
 rule GATK_applyBQSR:
     input:
@@ -179,7 +180,7 @@ rule GATK_applyBQSR:
     output:
         "6_GATK/{sample}_applybqsr.bam"
     shell:
-        "{Java} {Gatk} ApplyBQSR -bqsr {input[0]} -I {input[1]} -O {output}"
+        "{Java} {config[Gatk]} ApplyBQSR -bqsr {input[0]} -I {input[1]} -O {output}"
 
 rule GATK_HaplotypeCaller:
     input:
@@ -187,7 +188,7 @@ rule GATK_HaplotypeCaller:
     output:
         "6_GATK/{sample}_haplotypecaller.vcf"
     shell:
-        "{Java} {Gatk} HaplotypeCaller --emit-ref-confidence GVCF -I {input} -O {output} -R {Reference}"
+        "{Java} {config[Gatk]} HaplotypeCaller --emit-ref-confidence GVCF -I {input} -O {output} -R {config[reference]}"
 
 rule VEP_annotation:
     input:
@@ -195,4 +196,4 @@ rule VEP_annotation:
     output:
         "7_VEP/{sample}_vep_annotate.vcf"
     shell:
-        "{Vep} --fasta {Reference} --offline --species zea_mays --cache_version 39 --dir_cache {Cache_dir} -i {input} -o {output}"
+        "{config[Vep]} --fasta {config[reference]} --offline --species zea_mays --cache_version 39 --dir_cache {config[Cache_dir]} -i {input} -o {output}"
