@@ -1,0 +1,36 @@
+########################################################
+# this is the config file of snakemake for chip-seq analysis, use it before, your should install software: trimmomatic, bowtie2, samtools, bamtools, GEM, 
+# write by zhanweimin, 630950832@qq.com
+# 2019.3.13
+# I will update it after a half year
+########################################################
+
+
+#the trimmomatic software, it's to filter fastq file
+Trimmomatic: /home/zz/biosoft/Trimmomatic-0.38/trimmomatic-0.38.jar
+
+#trimmomatic sofware's adapt fasta
+Truseq_fa: /home/zz/biosoft/Trimmomatic-0.38/adapters/TruSeq2-SE.fa
+
+# the vep software is used to annotation the variant, but must download the genome annotation file before
+# you can refer to the url https://www.jianshu.com/p/f6273c9877d5
+Vep: /home/zz/biosoft/vep/ensembl-vep-release-92/vep
+Cache_dir: /disks/reference/vep/
+
+# the known vcf is to checkout the variant when use gatk call variant
+Known_vcf: /disks/reference/annotation/zea_mays.vcf
+Known_vcf_dir: /disks/reference/annotation/
+
+# the gatk software is to call variant
+Gatk: /home/zz/biosoft/gatk-4.0.4.0/gatk-package-4.0.4.0-local.jar
+
+# the genome reference and dir, before excurte you should use [samtools faitx] and [gatk CreateSequenceDictionary]
+# build reference.fai and reference.dict file 
+reference: /disks/reference/sequence/genome_fa/Zea_mays.B73_RefGen_v4.dna.chromosome.fa
+Reference_dir: /disks/reference/index/
+
+#this is the genome index, that is uesd for the bowtie2 alignment
+Index: /disks/reference/index/bowtie2_index/Zea_mays.B73_RefGen_v4.dna_index
+
+#the samples fastq file prefix, it must is "Y_2.cleaned_2.fastq.gz" format, "Y" is the sample's name, "2" is the replace's times
+samples: ["text"]
